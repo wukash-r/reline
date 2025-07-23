@@ -6,7 +6,7 @@ import java.time.Duration
 import java.util.Currency
 
 @ConfigurationProperties(prefix = "fuel-prices.scraper")
-data class FuelPricesScraperProperties(
+data class GlobalPetrolPricesScraperProperties(
     val currency: Currency,
     @NestedConfigurationProperty
     val rateLimit: RateLimitProperties,

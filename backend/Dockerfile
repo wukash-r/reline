@@ -6,6 +6,6 @@ RUN gradle --no-daemon clean build -x test
 
 FROM openjdk:23-jdk
 ARG version
-# todo stopgap solution until I figure what to do about versioning
+# todo temp solution until I figure what to do about versioning
 COPY --from=build /app/build/libs/reline-*.jar /usr/local/lib/app.jar
 ENTRYPOINT ["java","-jar","/usr/local/lib/app.jar"]

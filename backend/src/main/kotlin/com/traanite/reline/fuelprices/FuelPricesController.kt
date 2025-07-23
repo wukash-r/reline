@@ -8,6 +8,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
+import reactor.core.scheduler.Schedulers
 import java.util.*
 
 @RestController
@@ -38,7 +39,11 @@ class FuelPricesController(
 
     @PostMapping("/update")
     fun updateFuelPrices(): Mono<Void> {
-        return fuelPricesUpdater.updateFuelPrices().then()
+        fuelPricesUpdater.updateFuelPrices()
+            .subscribeOn(Schedulers.boundedElastic())
+            .subscribe()
+        log.info("Fuel prices update initiated")
+        return Mono.empty()
     }
 
     data class FuelPricesResponse(val values: List<CountryFuelPriceDataDto>)

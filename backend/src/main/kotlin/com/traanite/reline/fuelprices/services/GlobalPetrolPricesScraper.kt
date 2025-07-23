@@ -24,7 +24,7 @@ import java.util.regex.Pattern
 
 @Service
 class GlobalPetrolPricesScraper(
-    private val fuelPricesScraperProperties: FuelPricesScraperProperties
+    private val globalPetrolPricesScraperProperties: GlobalPetrolPricesScraperProperties
 ) {
     companion object {
         val log: Logger = LoggerFactory.getLogger(GlobalPetrolPricesScraper::class.java)
@@ -34,9 +34,9 @@ class GlobalPetrolPricesScraper(
     private val rateLimiter = RateLimiter.of(
         "global-petrol-prices-rate-limiter",
         RateLimiterConfig.custom()
-            .limitRefreshPeriod(fuelPricesScraperProperties.rateLimit.refreshPeriod)
-            .limitForPeriod(fuelPricesScraperProperties.rateLimit.limitForPeriod)
-            .timeoutDuration(fuelPricesScraperProperties.rateLimit.timeoutDuration)
+            .limitRefreshPeriod(globalPetrolPricesScraperProperties.rateLimit.refreshPeriod)
+            .limitForPeriod(globalPetrolPricesScraperProperties.rateLimit.limitForPeriod)
+            .timeoutDuration(globalPetrolPricesScraperProperties.rateLimit.timeoutDuration)
             .build()
     )
 
@@ -55,10 +55,10 @@ class GlobalPetrolPricesScraper(
                         ZonedDateTime.now(),
                         idFlux.key(),
                         fuelPricesOfCountry.firstOrNull { it.fuelType == FuelType.Gasoline }
-                            ?: FuelPrice(FuelType.Gasoline, fuelPricesScraperProperties.currency),
+                            ?: FuelPrice(FuelType.Gasoline, globalPetrolPricesScraperProperties.currency),
                         fuelPricesOfCountry.firstOrNull { it.fuelType == FuelType.Diesel } ?: FuelPrice(
                             FuelType.Diesel,
-                            fuelPricesScraperProperties.currency
+                            globalPetrolPricesScraperProperties.currency
                         ))
                 }
             }
@@ -66,8 +66,8 @@ class GlobalPetrolPricesScraper(
 
     private fun scrapeDataForFuelType(fuelType: FuelType, webClient: WebClient): Flux<Pair<Country, FuelPrice>> {
         val pageUri = when (fuelType) {
-            FuelType.Diesel -> fuelPricesScraperProperties.site.dieselPricesEndpoint
-            FuelType.Gasoline -> fuelPricesScraperProperties.site.gasolinePricesEndpoint
+            FuelType.Diesel -> globalPetrolPricesScraperProperties.site.dieselPricesEndpoint
+            FuelType.Gasoline -> globalPetrolPricesScraperProperties.site.gasolinePricesEndpoint
         }
 
         return scrapeUriPage(pageUri, webClient)
@@ -78,11 +78,10 @@ class GlobalPetrolPricesScraper(
             .flatMap { processValuePage(it, fuelType) }
     }
 
-    // todo should be a bean
     private fun newWebClient(): WebClient {
         return WebClient.builder()
             .defaultCookie("my_session_id", UUID.randomUUID().toString())
-            .baseUrl(fuelPricesScraperProperties.site.baseUrl)
+            .baseUrl(globalPetrolPricesScraperProperties.site.baseUrl)
             .build()
     }
 
@@ -104,7 +103,7 @@ class GlobalPetrolPricesScraper(
             .uri(countryPageUri)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(
-                Mono.just("literGalon=1&currency=${fuelPricesScraperProperties.currency.currencyCode}"),
+                Mono.just("literGalon=1&currency=${globalPetrolPricesScraperProperties.currency.currencyCode}"),
                 String::class.java
             )
             .retrieve()
@@ -141,7 +140,7 @@ class GlobalPetrolPricesScraper(
                 return (country to FuelPrice(
                     fuelType,
                     BigDecimal(fuelPriceValue.replace(",", "")),
-                    fuelPricesScraperProperties.currency
+                    globalPetrolPricesScraperProperties.currency
                 ))
                     .toMono()
             }
@@ -152,7 +151,7 @@ class GlobalPetrolPricesScraper(
         log.debug("newsHeadlines: $text")
 
         val p1 =
-            Pattern.compile("(.*): The price of (.*) is (.*) ${fuelPricesScraperProperties.currency.displayName} per (litre|liter). (.*)")
+            Pattern.compile("(.*): The price of (.*) is (.*) ${globalPetrolPricesScraperProperties.currency.displayName} per (litre|liter). (.*)")
         val m1 = p1.matcher(text)
         if (m1.find()) {
             val countryValue = m1.group(1)
@@ -163,7 +162,7 @@ class GlobalPetrolPricesScraper(
             return (country to FuelPrice(
                 fuelType,
                 BigDecimal(fuelPriceValue),
-                fuelPricesScraperProperties.currency
+                globalPetrolPricesScraperProperties.currency
             ))
                 .toMono()
         }

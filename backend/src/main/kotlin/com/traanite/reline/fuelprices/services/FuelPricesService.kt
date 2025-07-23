@@ -30,7 +30,6 @@ class FuelPricesService(
         return pricesRepository.saveAll(fuelPriceData)
     }
 
-    // todo caching here, evict cache after prices update
     fun findAllInWithCurrencyConversion(currency: Currency): Flux<CountryFuelPriceDataDto> {
         log.debug("Finding all fuel prices in currency: {}", currency)
         return aggregationRepository.findLatestFuelPriceData()
