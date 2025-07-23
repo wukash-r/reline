@@ -2,15 +2,14 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
-	id("org.springframework.boot") version "3.4.0"
+	id("org.springframework.boot") version "3.5.3"
 	id("io.spring.dependency-management") version "1.1.7"
 	kotlin("jvm") version "2.1.0"
 	kotlin("plugin.spring") version "2.1.0"
-	id("com.github.ben-manes.versions") version "0.51.0"
 }
 
 group = "com.traanite"
-version = "1.2.2" // todo replace with property
+version = "1.3.0" // todo replace with property
 
 java {
 	sourceCompatibility = JavaVersion.VERSION_23
@@ -31,7 +30,6 @@ dependencies {
 	val guavaVersion = "33.4.0-jre"
 	val springDocOpenApiVersion = "2.7.0"
 	val slf4jVersion = "2.0.16"
-	val kotlinLoggingJvmVersion = "7.0.3"
 
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-data-mongodb-reactive")
@@ -50,7 +48,6 @@ dependencies {
 	api("org.springdoc:springdoc-openapi-starter-webflux-ui:${springDocOpenApiVersion}")
 
 	implementation("org.slf4j:slf4j-api:${slf4jVersion}")
-	implementation("io.github.oshai:kotlin-logging-jvm:${kotlinLoggingJvmVersion}")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")

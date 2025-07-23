@@ -34,7 +34,8 @@ class SecurityConfig {
                     .pathMatchers("/actuator/**").permitAll()
                     .pathMatchers(HttpMethod.GET, "/currencies/**").permitAll()
                     .pathMatchers(HttpMethod.GET, "/fuelprices/**").permitAll()
-//                    .pathMatchers(HttpMethod.POST, "/fuelprices/**").permitAll() // todo
+                    .pathMatchers(HttpMethod.GET, "/locks/**").permitAll()
+//                    .pathMatchers(HttpMethod.POST, "/fuelprices/**", "/locks/**").permitAll() // todo
                     .anyExchange().denyAll()
             }
             .httpBasic { }

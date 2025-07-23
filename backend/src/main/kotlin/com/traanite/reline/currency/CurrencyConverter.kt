@@ -1,8 +1,9 @@
 package com.traanite.reline.currency
 
-import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.PostConstruct
 import org.bson.types.ObjectId
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -11,12 +12,15 @@ import java.math.BigDecimal
 import java.math.MathContext
 import java.util.*
 
-private val logger = KotlinLogging.logger {}
-
 @Service
 class CurrencyConverter(
     private val currencyExchangeApiClient: CurrencyExchangeApiClient,
-    private val currencyExchangeRatesRepository: CurrencyExchangeRatesRepository) {
+    private val currencyExchangeRatesRepository: CurrencyExchangeRatesRepository
+) {
+
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(CurrencyConverter::class.java)
+    }
 
     @PostConstruct
     private fun init() {
@@ -25,7 +29,7 @@ class CurrencyConverter(
 
     @Scheduled(cron = "0 0 4 * * *")
     private fun updateCurrencyPrices() {
-        logger.info { "CurrencyConverter initialized" }
+        log.info("CurrencyConverter initialized")
         currencyExchangeApiClient.currencyExchangeRates()
             .flatMap {
                 val currencyExchangeRates =
@@ -52,10 +56,10 @@ class CurrencyConverter(
                     }
                 }
                 .doOnError {
-                    logger.error {
-                        "Error converting currency. amount=${amount}, " +
-                                "fromCurrency=${fromCurrency}, toCurrency=${toCurrency}"
-                    }
+                    log.error(
+                        "Error converting currency. amount=${amount}, fromCurrency=${fromCurrency}, toCurrency=${toCurrency}",
+                        it
+                    )
                 }
         }
     }
@@ -77,7 +81,7 @@ class CurrencyConverter(
         return currencyExchangeRates.rates[fromCurrency.currencyCode]
             .let { rate ->
                 if (rate == null) {
-                    logger.error { "No rate found for currency: ${fromCurrency.currencyCode}" }
+                    log.error("No rate found for currency: ${fromCurrency.currencyCode}")
                     BigDecimal.ZERO
                 } else {
                     amount.divide(rate, MathContext.DECIMAL32)

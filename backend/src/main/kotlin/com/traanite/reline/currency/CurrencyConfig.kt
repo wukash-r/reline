@@ -1,6 +1,7 @@
 package com.traanite.reline.currency
 
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.NestedConfigurationProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders
@@ -27,6 +28,7 @@ class CurrencyConfig(private val currencyApiProperties: CurrencyApiProperties) {
 data class CurrencyApiProperties(
     val baseUrl: String,
     val apiKey: String,
+    @NestedConfigurationProperty
     val endpoints: CurrencyApiEndpoints
 )
 

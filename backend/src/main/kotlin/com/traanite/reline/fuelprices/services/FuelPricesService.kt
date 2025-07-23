@@ -5,15 +5,14 @@ import com.traanite.reline.fuelprices.model.CountryFuelPriceData
 import com.traanite.reline.fuelprices.model.LatestCountryFuelPriceData
 import com.traanite.reline.fuelprices.repository.FuelAggregationRepository
 import com.traanite.reline.fuelprices.repository.FuelPricesRepository
-import io.github.oshai.kotlinlogging.KotlinLogging
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.*
-
-private val log = KotlinLogging.logger {}
 
 @Service
 class FuelPricesService(
@@ -22,14 +21,17 @@ class FuelPricesService(
     private val currencyConverter: CurrencyConverter
 ) {
 
-    fun saveAll(fuelPriceData: Flux<CountryFuelPriceData>): Flux<CountryFuelPriceData> {
-        log.debug { "Saving fuel prices" }
+    companion object {
+        val log: Logger = LoggerFactory.getLogger(FuelPricesService::class.java)
+    }
+
+    fun saveAll(fuelPriceData: List<CountryFuelPriceData>): Flux<CountryFuelPriceData> {
+        log.debug ("Saving fuel prices" )
         return pricesRepository.saveAll(fuelPriceData)
     }
 
-    // todo caching here, evict cache after prices update
     fun findAllInWithCurrencyConversion(currency: Currency): Flux<CountryFuelPriceDataDto> {
-        log.debug { "Finding all fuel prices in currency: $currency" }
+        log.debug("Finding all fuel prices in currency: {}", currency)
         return aggregationRepository.findLatestFuelPriceData()
             .flatMap { toCurrencyConvertedDto(it, currency) }
     }
