@@ -1,15 +1,17 @@
 fuel-prices:
   scheduled-update:
     cron: 0 0 6 * * ?
-  rateLimit:
-    refreshPeriodSeconds: 1
-    limitForPeriod: 20
-    timeoutDurationMinutes: 1
-  site:
-    base-url: https://www.globalpetrolprices.com/
-    endpoints:
-      diesel-prices: /diesel_prices/
-      gasoline-prices: /gasoline_prices/
+  scraper:
+    currency: USD
+    rateLimit:
+      refreshPeriod: 1s
+      limitForPeriod: 5
+      timeoutDuration: 1m
+    site:
+      base-url: https://www.globalpetrolprices.com/
+      diesel-prices-endpoint: /diesel_prices/
+      gasoline-prices-endpoint: /gasoline_prices/
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -21,8 +23,6 @@ currency:
     endpoints:
       exchange-rates: /api/latest.json
       currencies: /api/currencies.json
-
-
 
 spring:
   data:

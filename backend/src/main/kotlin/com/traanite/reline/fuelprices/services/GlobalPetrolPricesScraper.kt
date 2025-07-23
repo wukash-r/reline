@@ -18,35 +18,25 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import java.math.BigDecimal
-import java.time.Duration
 import java.time.ZonedDateTime
 import java.util.*
 import java.util.regex.Pattern
 
 @Service
-class GlobalPetrolPricesScraper {
+class GlobalPetrolPricesScraper(
+    private val fuelPricesScraperProperties: FuelPricesScraperProperties
+) {
     companion object {
         val log: Logger = LoggerFactory.getLogger(GlobalPetrolPricesScraper::class.java)
     }
-
-    // todo all these should be properties \/
-    private val currency = Currency.getInstance("USD")
-    private val refreshPeriodSeconds: Long = 1
-    private val limitForPeriod = 5
-    private val timeoutDurationMinutes: Long = 5
-
-    private val baseUri = "https://www.globalpetrolprices.com/"
-    private val dieselUri = "/diesel_prices/"
-    private val gasolineUri = "/gasoline_prices/"
-    // todo all these should be properties /\
 
     // todo used to cause HTTP 520, verify if still does
     private val rateLimiter = RateLimiter.of(
         "global-petrol-prices-rate-limiter",
         RateLimiterConfig.custom()
-            .limitRefreshPeriod(Duration.ofSeconds(refreshPeriodSeconds))
-            .limitForPeriod(limitForPeriod)
-            .timeoutDuration(Duration.ofMinutes(timeoutDurationMinutes))
+            .limitRefreshPeriod(fuelPricesScraperProperties.rateLimit.refreshPeriod)
+            .limitForPeriod(fuelPricesScraperProperties.rateLimit.limitForPeriod)
+            .timeoutDuration(fuelPricesScraperProperties.rateLimit.timeoutDuration)
             .build()
     )
 
@@ -64,16 +54,20 @@ class GlobalPetrolPricesScraper {
                         ObjectId(),
                         ZonedDateTime.now(),
                         idFlux.key(),
-                        fuelPricesOfCountry.firstOrNull { it.fuelType == FuelType.Gasoline } ?: FuelPrice(FuelType.Gasoline, currency),
-                        fuelPricesOfCountry.firstOrNull { it.fuelType == FuelType.Diesel } ?: FuelPrice(FuelType.Diesel, currency))
+                        fuelPricesOfCountry.firstOrNull { it.fuelType == FuelType.Gasoline }
+                            ?: FuelPrice(FuelType.Gasoline, fuelPricesScraperProperties.currency),
+                        fuelPricesOfCountry.firstOrNull { it.fuelType == FuelType.Diesel } ?: FuelPrice(
+                            FuelType.Diesel,
+                            fuelPricesScraperProperties.currency
+                        ))
                 }
             }
     }
 
     private fun scrapeDataForFuelType(fuelType: FuelType, webClient: WebClient): Flux<Pair<Country, FuelPrice>> {
         val pageUri = when (fuelType) {
-            FuelType.Diesel -> dieselUri
-            FuelType.Gasoline -> gasolineUri
+            FuelType.Diesel -> fuelPricesScraperProperties.site.dieselPricesEndpoint
+            FuelType.Gasoline -> fuelPricesScraperProperties.site.gasolinePricesEndpoint
         }
 
         return scrapeUriPage(pageUri, webClient)
@@ -88,7 +82,7 @@ class GlobalPetrolPricesScraper {
     private fun newWebClient(): WebClient {
         return WebClient.builder()
             .defaultCookie("my_session_id", UUID.randomUUID().toString())
-            .baseUrl(baseUri)
+            .baseUrl(fuelPricesScraperProperties.site.baseUrl)
             .build()
     }
 
@@ -109,7 +103,10 @@ class GlobalPetrolPricesScraper {
         return webClient.post()
             .uri(countryPageUri)
             .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(Mono.just("literGalon=1&currency=${currency.currencyCode}"), String::class.java)
+            .body(
+                Mono.just("literGalon=1&currency=${fuelPricesScraperProperties.currency.currencyCode}"),
+                String::class.java
+            )
             .retrieve()
             .toBodilessEntity()
             .transformDeferred(RateLimiterOperator.of(this.rateLimiter))
@@ -126,7 +123,8 @@ class GlobalPetrolPricesScraper {
 
     private fun processValuePage(pageHtml: String, fuelType: FuelType): Mono<Pair<Country, FuelPrice>> {
         val doc = Jsoup.parseBodyFragment(pageHtml)
-        val tableFuelPrice = doc.select("#graphic > table:nth-child(1) > tbody:nth-child(2) > tr:nth-child(1) > td:nth-child(2)")
+        val tableFuelPrice =
+            doc.select("#graphic > table:nth-child(1) > tbody:nth-child(2) > tr:nth-child(1) > td:nth-child(2)")
         val headerWithCountryName = doc.select("#graphPageLeft > h1:nth-child(1)")
 
         if (!tableFuelPrice.isEmpty()) {
@@ -143,16 +141,18 @@ class GlobalPetrolPricesScraper {
                 return (country to FuelPrice(
                     fuelType,
                     BigDecimal(fuelPriceValue.replace(",", "")),
-                    currency))
+                    fuelPricesScraperProperties.currency
+                ))
                     .toMono()
             }
         }
 
         val newsHeadlines = doc.select("div.tipInfo > div:nth-child(1)")
         val text = newsHeadlines.text()
-        log.debug(text)
+        log.debug("newsHeadlines: $text")
 
-        val p1 = Pattern.compile("(.*): The price of (.*) is (.*) ${currency.displayName} per (litre|liter). (.*)")
+        val p1 =
+            Pattern.compile("(.*): The price of (.*) is (.*) ${fuelPricesScraperProperties.currency.displayName} per (litre|liter). (.*)")
         val m1 = p1.matcher(text)
         if (m1.find()) {
             val countryValue = m1.group(1)
@@ -163,7 +163,8 @@ class GlobalPetrolPricesScraper {
             return (country to FuelPrice(
                 fuelType,
                 BigDecimal(fuelPriceValue),
-                currency))
+                fuelPricesScraperProperties.currency
+            ))
                 .toMono()
         }
         return Mono.empty()
